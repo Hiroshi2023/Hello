@@ -34,12 +34,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Train model
-        run: python script/model_training.py
+        run: PYTHONPATH=. python script/model_training.py
 
       - name: Evaluate model
         id: evaluate
         run: |
-          python script/model_evaluation.py
+          PYTHONPATH=. python script/model_evaluation.py
           SCORE=$(jq .accuracy metrics/metrics.json)
           echo "Model Score is: $SCORE"
           echo "score=$SCORE" >> $GITHUB_OUTPUT
