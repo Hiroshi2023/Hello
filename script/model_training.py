@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from data_processing import load_data, preprocess_data
+from script.data_processing import load_data, preprocess_data
 
 class DiamondPricePredictor(nn.Module):
     def __init__(self, input_size):
