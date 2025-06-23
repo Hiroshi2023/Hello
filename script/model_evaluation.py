@@ -4,7 +4,7 @@ import os
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 from script.model_training import DiamondPricePredictor, prepare_data
-from data_processing import load_data, preprocess_data
+from script.data_processing import load_data, preprocess_data
 
 def evaluate_model(model_path, data_path):
     """Évalue le modèle sur les données de test"""
