@@ -55,7 +55,7 @@ def train_model(X_train, y_train, input_size, epochs=100, lr=0.001):
 
 if __name__ == "__main__":
     # Chargement et prétraitement des données
-    data = load_data('C:/Users/COMPUTER-STORE/Documents/Environnement/ANN/diamond_ana/data/diamonds.csv')
+    data = load_data('data/diamonds.csv')
     data = preprocess_data(data)
     
     # Préparation des données
@@ -66,4 +66,4 @@ if __name__ == "__main__":
     model = train_model(X_train, y_train, input_size)
     
     # Sauvegarde du modèle
-    torch.save(model.state_dict(), 'C:/Users/COMPUTER-STORE/Documents/Environnement/ANN/diamond_ana/models/diamond_price_predictor.pth')
+    torch.save(model.state_dict(), 'models/diamond_price_predictor.pth')
