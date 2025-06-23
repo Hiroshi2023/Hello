@@ -20,11 +20,6 @@ jobs:
 
     steps:
 
-      - name: 🔧 Définir PYTHONPATH
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          pdoc script/model_training.py script/model_evaluation.py script/deploy_model.py -o site/docs
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -90,7 +85,9 @@ jobs:
           
       - name: Generate Technical Documentation
         if: success()
-        run: pdoc script/model_training.py script/model_evaluation.py script/deploy.py -o site/docs
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pdoc script/model_training.py script/model_evaluation.py script/deploy.py -o site/docs
           
       - name: Deploy to GitHub Pages
         if: success()
