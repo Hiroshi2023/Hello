@@ -39,6 +39,6 @@ def analyze_data(df):
     return df.describe()
 
 if __name__ == "__main__":
-    data = load_data('C:/Users/COMPUTER-STORE/Documents/Environnement/ANN/diamond_ana/data/diamonds.csv')
-    data = preprocess_data(data)
-    stats = analyze_data(data)
+    df = load_data('data/diamonds.csv')
+    df = preprocess_data(df)
+    stats = analyze_data(df)
