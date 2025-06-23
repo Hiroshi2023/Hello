@@ -1,4 +1,5 @@
 import torch
+import os
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 from model_training import DiamondPricePredictor, prepare_data
