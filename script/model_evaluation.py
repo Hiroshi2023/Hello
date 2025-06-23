@@ -44,4 +44,4 @@ def evaluate_model(model_path, data_path):
     return mse, rmse, r2
 
 if __name__ == "__main__":
-    evaluate_model('C:/Users/COMPUTER-STORE/Documents/Environnement/ANN/diamond_ana/models/diamond_price_predictor.pth', 'C:/Users/COMPUTER-STORE/Documents/Environnement/ANN/diamond_ana/data/diamonds.csv')
+    evaluate_model('models/diamond_price_predictor.pth', 'data/diamonds.csv')
