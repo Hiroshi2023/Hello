@@ -1,0 +1,8 @@
+scikit-learn
+joblib
+huggingface_hub
+python-dotenv
+pandas
+matplotlib
+seaborn
+numpy
