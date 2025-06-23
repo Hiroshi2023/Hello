@@ -3,7 +3,7 @@ import os
 import shutil
 
 login(token=os.getenv("HF_API_KEY"))
-repo_id = "ton-utilisateur/diamond-model"
+repo_id = "Hiroshi99/diamond-model"
 local_model_path = "models/"
 
 api = HfApi()
