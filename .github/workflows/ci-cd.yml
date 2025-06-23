@@ -84,7 +84,7 @@ jobs:
           
       - name: Generate Technical Documentation
         if: success()
-        run: pdoc script/data_training.py script/model_evaluation.py script/deploy.py -o site/docs
+        run: pdoc script/model_training.py script/model_evaluation.py script/deploy.py -o site/docs
           
       - name: Deploy to GitHub Pages
         if: success()
