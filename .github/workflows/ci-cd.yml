@@ -1,77 +1,151 @@
-name: Diamond Model CI/CD
+name: CI/CD Pipeline for Heart Disease Model
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    
+    # NOUVEAU : On définit une variable d'environnement pour le job
+    # Ceci est la clé pour résoudre le problème.
+    env:
+      THRESHOLD: ${{ secrets.THRESHOLD_SCORE }}
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.9'
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install huggingface_hub
 
-      - name: 🧹 Data Processing
-        run: python script/data_processing.py
+      - name: Train model
+        run: python scripts/train.py
 
-      - name: 🏋️ Train Model
-        run: python script/model_training.py
-
-      - name: 📊 Evaluate Model
-        run: python script/model_evaluation.py
-
-      - name: 📈 Compare with Threshold
-        id: compare_score
+      - name: Evaluate model
+        id: evaluate
         run: |
-          import json
-          threshold = float("${{ secrets.THRESHOLD_SCORE }}")
-          with open("results.json") as f:
-              score = json.load(f)["score"]
-          print(f"Model score: {score}, Threshold: {threshold}")
-          if score >= threshold:
-              print("::set-output name=deploy::true")
-          else:
-              print("::set-output name=deploy::false")
+          python scripts/evaluate.py
+          SCORE=$(jq .accuracy metrics/metrics.json)
+          echo "Model Score is: $SCORE"
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
 
-      - name: 🚀 Deploy to Hugging Face if score OK
-        if: steps.compare_score.outputs.deploy == 'true'
+      # --- BLOC DE DÉPLOIEMENT ---
+      - name: Deploy to Hugging Face Hub
+        # CORRIGÉ : On compare maintenant avec env.THRESHOLD
+        # Notez l'absence de ${{...}} car c'est une condition if
+        if: steps.evaluate.outputs.score >= env.THRESHOLD
+        env:
+          HF_API_KEY: ${{ secrets.HF_API_KEY }}
+        run: python scripts/deploy.py
+      
+      # --- BLOC DE GÉNÉRATION DU SITE ---
+      - name: Generate static site for results (Deployment Case)
+        # CORRIGÉ : On compare avec env.THRESHOLD
+        if: steps.evaluate.outputs.score >= env.THRESHOLD
         run: |
-          from huggingface_hub import HfApi, HfFolder
-          HfFolder.save_token("${{ secrets.HF_API_KEY }}")
-          api = HfApi()
-          api.upload_file(
-              path_or_fileobj="models/model.pkl",
-              path_in_repo="model.pkl",
-              repo_id="votre-username/diamond-model",
-              repo_type="model"
-          )
+          mkdir -p site
+          echo "<html><body>" > site/index.html
+          echo "<h1>Résultats du Modèle de Diamond</h1>" >> site/index.html
+          echo "<h2>Statut : DÉPLOYÉ AVEC SUCCÈS</h2>" >> site/index.html
+          echo "<p>Dernière mise à jour : $(date)</p>" >> site/index.html
+          echo "<h3>Score d'Accuracy : ${{ steps.evaluate.outputs.score }} (Seuil : ${{ env.THRESHOLD }})</h3>" >> site/index.html
+          echo "<p>Le modèle a été déployé car le score est supérieur ou égal au seuil.</p>" >> site/index.html
+          echo "<p>Lien vers le modèle sur Hugging Face : <a href='https://huggingface.co/Hiroshi99/diamond-model'>Voir le modèle</a></p>" >> site/index.html
+          echo "<p><a href='docs/index.html'>Voir la documentation technique du projet</a></p>" >> site/index.html
+          echo "</body></html>" >> site/index.html
 
-      - name: 📧 Send Email Notification
+      - name: Generate static site for results (Non-Deployment Case)
+        # CORRIGÉ : On compare avec env.THRESHOLD
+        if: steps.evaluate.outputs.score < env.THRESHOLD
         run: |
-          python -c "
-import smtplib
-from email.message import EmailMessage
-with open('results.json') as f:
-    score = f.read()
-msg = EmailMessage()
-msg.set_content(f'Resultat évaluation : {score}')
-msg['Subject'] = 'Évaluation du modèle Diamond'
-msg['From'] = '${{ secrets.SMTP_USER }}'
-msg['To'] = '${{ secrets.SMTP_USER }}'
-server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-server.login('${{ secrets.SMTP_USER }}', '${{ secrets.SMTP_PASS }}')
-server.send_message(msg)
-server.quit()
-"
+          mkdir -p site
+          echo "<html><body>" > site/index.html
+          echo "<h1>Résultats du Modèle de Prédiction Cardiaque</h1>" >> site/index.html
+          echo "<h2>Statut : DÉPLOIEMENT REFUSÉ</h2>" >> site/index.html
+          echo "<p>Dernière mise à jour : $(date)</p>" >> site/index.html
+          echo "<h3>Score d'Accuracy : ${{ steps.evaluate.outputs.score }} (Seuil Requis : ${{ env.THRESHOLD }})</h3>" >> site/index.html
+          echo "<p>Le modèle n'a pas été déployé car le score est inférieur au seuil requis.</p>" >> site/index.html
+          echo "<p><a href='docs/index.html'>Voir la documentation technique du projet</a></p>" >> site/index.html
+          echo "</body></html>" >> site/index.html
+          
+      - name: Generate Technical Documentation
+        if: success()
+        run: pdoc scripts/train.py scripts/evaluate.py scripts/deploy.py -o site/docs
+          
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: site
+          
+      # --- BLOC DE NOTIFICATIONS (ADAPTÉ) ---
+      - name: Send success email notification (Deployment)
+        # CORRIGÉ : On compare avec env.THRESHOLD
+        if: success() && steps.evaluate.outputs.score >= env.THRESHOLD
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "✅ [SUCCÈS] Déploiement du modèle diamond"
+          body: |
+            Bonjour,
+            Le modèle a été validé et déployé avec succès.
+            Score d'accuracy obtenu : ${{ steps.evaluate.outputs.score }} (Seuil : ${{ env.THRESHOLD }})
+            Commit par : ${{ github.actor }}
+            Lien vers les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.ADMIN_EMAIL }},${{ github.event.pusher.email }}
+          from: GitHub Actions Notifier <${{ secrets.SMTP_USER }}>
+
+      - name: Send failure email notification (Low Score)
+        # CORRIGÉ : On compare avec env.THRESHOLD
+        if: success() && steps.evaluate.outputs.score < env.THRESHOLD
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "ℹ [INFO] Non-déploiement du modèle (Score trop bas)"
+          body: |
+            Bonjour,
+            La validation a réussi, mais le score est trop bas pour un déploiement.
+            Score d'accuracy obtenu : ${{ steps.evaluate.outputs.score }} (Seuil requis : ${{ env.THRESHOLD }})
+            Commit par : ${{ github.actor }}
+            Lien vers les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.ADMIN_EMAIL }},${{ github.event.pusher.email }}
+          from: GitHub Actions Notifier <${{ secrets.SMTP_USER }}>
+
+      - name: Send failure email notification (Job Failed)
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "❌ [ÉCHEC] Le workflow CI/CD a échoué"
+          body: |
+            Bonjour,
+            Le workflow a échoué en raison d'une erreur.
+            Merci de consulter les logs.
+            Commit par : ${{ github.actor }}
+            Lien vers les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.ADMIN_EMAIL }},${{ github.event.pusher.email }}
+          from: GitHub Actions Notifier <${{ secrets.SMTP_USER }}>
