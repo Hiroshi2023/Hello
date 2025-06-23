@@ -9,7 +9,8 @@ def evaluate_model(model_path, data_path):
     # Chargement des données
     data = load_data(data_path)
     data = preprocess_data(data)
-    
+
+    os.makedirs('metrics',exist_ok=True)
     # Préparation des données
     X_train, X_test, y_train, y_test = prepare_data(data)
     
@@ -40,6 +41,9 @@ def evaluate_model(model_path, data_path):
     print(f"MSE: {mse:.2f}")
     print(f"RMSE: {rmse:.2f}")
     print(f"R2 Score.: {r2:.2f}")
+    metrics = {'r2':r2}
+    with open('metrics/metrics.json','w') as f:
+        json.dump(metrics,f)
     
     return mse, rmse, r2
 
