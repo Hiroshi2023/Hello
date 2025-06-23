@@ -50,7 +50,7 @@ jobs:
         if: steps.evaluate.outputs.score >= env.THRESHOLD
         env:
           HF_API_KEY: ${{ secrets.HF_API_KEY }}
-        run: python scripts/deploy.py
+        run: python script/deploy.py
       
       # --- BLOC DE GÉNÉRATION DU SITE ---
       - name: Generate static site for results (Deployment Case)
